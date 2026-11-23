@@ -158,9 +158,11 @@ const maskCode = (raw: string) => `VC-****-****-${raw.trim().slice(-4).toUpperCa
 async function sha256Hex(text: string): Promise<string> {
   if (window.crypto?.subtle) {
     const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
   }
-  return btoa(unescape(encodeURIComponent(text)));
+  return text;
 }
 
 function createSeedState(): StoreState {
@@ -268,12 +270,10 @@ export function App() {
   const [page, setPage] = useState<PageKey>('home');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  // Public filter state
   const [search, setSearch] = useState('');
   const [brandFilter, setBrandFilter] = useState('ALL');
   const [typeFilter, setTypeFilter] = useState('ALL');
 
-  // Detail Buy state
   const [buyName, setBuyName] = useState('');
   const [buyPhone, setBuyPhone] = useState('');
   const [buyEmail, setBuyEmail] = useState('');
@@ -282,7 +282,6 @@ export function App() {
   const [buyMsg, setBuyMsg] = useState('');
   const [buyErr, setBuyErr] = useState('');
 
-  // Sell Form state
   const [sellName, setSellName] = useState('');
   const [sellPhone, setSellPhone] = useState('');
   const [sellEmail, setSellEmail] = useState('');
@@ -296,7 +295,6 @@ export function App() {
   const [sellCreated, setSellCreated] = useState<SellRequest | null>(null);
   const [sellErr, setSellErr] = useState('');
 
-  // Lookup state
   const [lookupCode, setLookupCode] = useState('');
   const [lookupPhone, setLookupPhone] = useState('');
   const [lookupResult, setLookupResult] = useState<{ kind: 'sell'; id: string } | { kind: 'buy'; id: string } | null>(null);
@@ -305,7 +303,6 @@ export function App() {
   const [lookupMsg, setLookupMsg] = useState('');
   const [lookupErr, setLookupErr] = useState('');
 
-  // Admin state
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const [adminUser, setAdminUser] = useState('');
   const [adminPass, setAdminPass] = useState('');
@@ -318,7 +315,6 @@ export function App() {
   const [stockSellPrices, setStockSellPrices] = useState<Record<string, number>>({});
   const [stockCodes, setStockCodes] = useState<Record<string, string>>({});
 
-  // Admin direct inventory & pricing rule forms
   const [newInvBrand, setNewInvBrand] = useState('br-gotit');
   const [newInvFace, setNewInvFace] = useState(500_000);
   const [newInvCost, setNewInvCost] = useState(425_000);
@@ -401,7 +397,6 @@ export function App() {
 
   const selectedItem = store.inventory.find((i) => i.id === selectedItemId) ?? null;
 
-  // ===== HANDLERS =====
   const handleCreateSell = async (e: React.FormEvent) => {
     e.preventDefault();
     setSellErr('');
@@ -541,17 +536,18 @@ export function App() {
     setAdminErr('');
     setAdminMsg('');
     try {
-      let errText: string | void = undefined;
+      let errText = '';
       await updateStore((d) => {
-        errText = fn(d);
+        const res = fn(d);
+        if (typeof res === 'string') errText = res;
       });
-      if (errText) {
+      if (errText.length > 0) {
         setAdminErr(errText);
       } else {
         setAdminMsg(successMsg);
       }
     } catch (err: any) {
-      setAdminErr(err.message || 'Thao tác thất bại');
+      setAdminErr(err?.message || 'Thao tác thất bại');
     }
   };
 
